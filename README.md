@@ -10,6 +10,10 @@ Servidor de Backups:
 sobusrv:
 	Processo pai aceita conexões, e manda o trabalho para processos filhos.
 	Comunicação entre processos filhos e clientes por pipes com nome.
+	Guarda tudo numa diretoria /home/user/.Backup/
+	Respostas aos pedidos por sinais.
+	Ações concorrentes sempre <=5.
 
 sobucli:
 	Estabelece conexões com o servidor e faz o que tem a fazer.
+	Cliente não lê nem escreve ficheiros. Só faz pedidos.
