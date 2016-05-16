@@ -41,5 +41,9 @@ int main(int argc, char const *argv[])
 		pedido[x-1] = '\0';
 		printf("%s\n", pedido);
 	}
+	if((close(fd))==-1){
+		perror("Descritor de ficheiros");
+		return 1;
+	}
 	return 0;
 }

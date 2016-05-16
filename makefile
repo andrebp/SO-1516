@@ -1,6 +1,5 @@
 CC = gcc
 
-
 all: cliente servidor 
 
 cliente: sobucli.c 

@@ -47,5 +47,20 @@ int main(int argc, char const *argv[])
     //printf("Pedido: %s ; Tamanho: %d ;\n", pedido, (int)strlen(pedido));
     write(fd, pedido, strlen(pedido));
 
+	if((close(fd))==-1){
+		perror("Descritor de ficheiros");
+		return 1;
+	}
 	return 0;
 }
+
+/* 
+
+Como é que faço a arquitetura da cena? 1 pipe pra todos,
+vários pipes de escrita/leitura;
+
+Onde é que devo por os programas? 
+
+André -> makefile de jeito
+
+*/
