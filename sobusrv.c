@@ -26,20 +26,18 @@ ssize_t readln(int fildes, void *buf, size_t nbyte)
 int main(int argc, char const *argv[])
 {
 	mkfifo("queuePedidos", 0666); /* Pipe onde chegam os pedidos */
-	FILE * file;
-	if((file = fopen("./queuePedidos", "r")) == NULL){
-		perror("Caminho do ficheiro Inválido");
-		return 1;
-	}
 	int fd;
-	if((fd = fileno(file)) == -1) {
-		perror("Stream de Ficheiro Inválido");
+	fd = open("queuePedidos", O_RDONLY);
+	if (fd == -1){
+		perror("Descritor de ficheiros");
 		return 1;
 	}
-	while(true) { /* Ciclo à espera de pedidos dos clientes */
+	int x=1;
+	while(x>0) { /* Ciclo à espera de pedidos dos clientes */
 		// ESTE CICLO FAZ SENTIDO ASSIM? -> NEVES
 	 	char pedido[size];
-		readln(fd, pedido, size);
+		x=readln(fd, pedido, size);
+		pedido[x-1] = '\0';
 		printf("%s\n", pedido);
 	}
 	return 0;

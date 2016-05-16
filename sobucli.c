@@ -29,14 +29,10 @@ int main(int argc, char const *argv[])
 		return 1;
 	}
 	/* Abrir pipe de pedidos para escrita */
-	FILE * file;
-	if((file = fopen("./queuePedidos", "w")) == NULL){
-		perror("Caminho do ficheiro Inválido");
-		return 1;
-	}
 	int fd;
-	if((fd = fileno(file)) == -1) {
-		perror("Stream de Ficheiro Inválido");
+	fd = open("queuePedidos", O_WRONLY);
+	if (fd == -1){
+		perror("Descritor de ficheiros");
 		return 1;
 	}
 	/* Concatenar argv numa só string pedido */
@@ -48,6 +44,7 @@ int main(int argc, char const *argv[])
         	strcat(pedido, " ");
     }
     /* Enviar pedido pelo pipe */
+    //printf("Pedido: %s ; Tamanho: %d ;\n", pedido, (int)strlen(pedido));
     write(fd, pedido, strlen(pedido));
 
 	return 0;

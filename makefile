@@ -4,13 +4,13 @@ CC = gcc
 all: cliente servidor 
 
 cliente: sobucli.c 
-	$(CC) -o sobucli sobucli.c
+	$(CC) sobucli.c -o sobucli
 
 servidor: sobusrv.c 
-	$(CC) -o sobusrv sobusrv.c
+	$(CC) sobusrv.c -o sobusrv
 
 utilitarios: utils.c utils.h
-	$(CC) -o util utils
+	$(CC) util.c -o util
 
 clean:
-	rm sobucli sobusrv
+	rm sobucli sobusrv queuePedidos
