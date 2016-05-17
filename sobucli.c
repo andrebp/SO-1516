@@ -9,46 +9,40 @@
 
 #define size 1024
 
-ssize_t readln(int fildes, void *buf, size_t nbyte)
-{
-	char *varchar = (char *) buf;
-	int i=0;
-	ssize_t x=0;
-	
-	while((x += read(fildes, varchar+i, size))>0 && i<nbyte){
-		if (varchar[x-1] == '\n') break;
-		i++;
-	}
-	return x;
-}
 
 int main(int argc, char const *argv[])
 {
-	if (argc < 3) { /* Argumentos insuficientes */
-		puts("Erro: Argumentos insuficientes.");
-		return 1;
-	}
-	/* Abrir pipe de pedidos para escrita */
-	int fd;
-	fd = open("queuePedidos", O_WRONLY);
-	if (fd == -1){
-		perror("Descritor de ficheiros");
-		return 1;
-	}
-	/* Concatenar argv numa só string pedido */
+	int pipe_wr;
 	char pedido[size];
-	int i;
-	for (i=1; i<argc; i++) {
+	int i, n_bytes;
+
+	if (argc < 3) { /* Argumentos insuficientes */
+		puts("Error: Insufficient Arguments.");
+		return 1;
+	}
+	
+	if ((pipe_wr = open("request_queue", O_WRONLY)) == -1){
+		perror("File Descriptor");
+		return 1;
+	}
+	
+	/* Concatenar argv numa só string pedido */
+	for (i = 1; i < argc; i++) {
 		strcat(pedido, argv[i]);
         if (argc > i+1)
         	strcat(pedido, " ");
     }
+	n_bytes = strlen(pedido);
+    
     /* Enviar pedido pelo pipe */
-    printf("Pedido: %s ; Tamanho: %d ;\n", pedido, (int)strlen(pedido));
-    write(fd, pedido, strlen(pedido));
-
-	if((close(fd))==-1){
-		perror("Descritor de ficheiros");
+	for (i = 0; i < 5; i++)
+	{
+	    write(pipe_wr, &n_bytes, sizeof(int));
+	    write(pipe_wr, pedido, strlen(pedido));
+	}
+	sleep(10);
+	if((close(pipe_wr))==-1){
+		perror("File Descriptor");
 		return 1;
 	}
 	return 0;
@@ -56,9 +50,14 @@ int main(int argc, char const *argv[])
 
 /* 
 
-Como é que faço a arquitetura da cena? 1 pipe pra todos,
-vários pipes de escrita/leitura;
+- Cliente manda stream de bits com tudo.
+- 4 bytes PID + 4 bytes n_bytes + nbytes = tamanho da stream de bites
 
-André -> makefile de jeito
+
+Relatório:
+
+- Fazer datagrama a explicar buffer;
+-- Se a mensagem for mt grande enão couber no buffer á primeira deveria ler-se os primeiros 8 bits
+para saber até onde se tem de ler.
 
 */
