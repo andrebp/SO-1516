@@ -46,7 +46,7 @@ int main(int argc, char const *argv[])
 	    write(pipe_wr, pedido, strlen(pedido));
 	}
 	sleep(10);
-	signal(SIGUSR2,signalhandler);
+
 	if((close(pipe_wr))==-1){
 		perror("File Descriptor");
 		return 1;
