@@ -25,21 +25,18 @@ ssize_t readln(int fildes, void *buf, size_t nbyte)
 
 int main(int argc, char const *argv[])
 {
-	mkfifo("queuePedidos", 0666); /* Pipe onde chegam os pedidos */
+	mkfifo("queuePedidos", 0777); /* Pipe onde chegam os pedidos */
 	int fd;
 	fd = open("queuePedidos", O_RDONLY);
 	if (fd == -1){
 		perror("Descritor de ficheiros");
 		return 1;
 	}
-	
-	int x=1;
-	while(x>0) { /* Ciclo à espera de pedidos dos clientes */
-		// ESTE CICLO FAZ SENTIDO ASSIM? -> NEVES
-	 	char pedido[size];
-		x=readln(fd, pedido, size);
-		pedido[x-1] = '\0';
-		printf("%s\n", pedido);
+ 	char pedido[size];
+	int x;
+	while((x=read(fd, pedido, size))>0) { /* Ciclo à espera de pedidos dos clientes */
+		pedido[x] = '\0';
+		printf("%s", pedido);
 	}
 	if((close(fd))==-1){
 		perror("Descritor de ficheiros");

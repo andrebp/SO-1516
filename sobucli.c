@@ -44,7 +44,7 @@ int main(int argc, char const *argv[])
         	strcat(pedido, " ");
     }
     /* Enviar pedido pelo pipe */
-    //printf("Pedido: %s ; Tamanho: %d ;\n", pedido, (int)strlen(pedido));
+    printf("Pedido: %s ; Tamanho: %d ;\n", pedido, (int)strlen(pedido));
     write(fd, pedido, strlen(pedido));
 
 	if((close(fd))==-1){
@@ -58,8 +58,6 @@ int main(int argc, char const *argv[])
 
 Como é que faço a arquitetura da cena? 1 pipe pra todos,
 vários pipes de escrita/leitura;
-
-Onde é que devo por os programas? 
 
 André -> makefile de jeito
 
