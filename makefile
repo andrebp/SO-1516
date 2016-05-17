@@ -18,4 +18,4 @@ utilitarios: utils.c utils.h
 	$(CC) util.c -o util
 
 clean:
-	rm sobucli sobusrv request_queue *.o
+	rm sobucli sobusrv *.o

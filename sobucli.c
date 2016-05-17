@@ -7,58 +7,70 @@
 #include <string.h>
 //#include <util.h>
 
-#define size 1024
+#define REQUEST_MSIZE 1024
+#define REQUEST_HEADER 10
+
+/* Função que produz uma mensagem com (PID do processo cliente + Tamanho Comando + Comando) */
+int produce_request(char * comando, char *request)
+{	 
+	int cmd_bytes, process_pid, i;
+	
+	// Construir o datagrama: 1) PID + 2) Tamanho Comando + 3) Comando 
+	// 1) PID
+	process_pid = (int)getpid();
+
+ 	// 2) Tamanho Comando
+	cmd_bytes = strlen(comando);
+	printf("%s, %d\n", comando, cmd_bytes);
+	
+	// 3) A string comando é criada na main
+
+	// Por 1), 2) e 3) na string request
+	snprintf(request, REQUEST_HEADER, "%d %d ", process_pid, cmd_bytes);
+	strcat(request, comando);
+
+	return (int) strlen(request);
+}
 
 
 int main(int argc, char const *argv[])
 {
 	int pipe_wr;
-	char pedido[size];
-	int i, n_bytes;
+	char request[REQUEST_MSIZE];
+	char comando[REQUEST_MSIZE-REQUEST_HEADER];
+	int i, request_size;
 
-	if (argc < 3) { /* Argumentos insuficientes */
+ // Argumentos insuficientes 
+	if (argc < 3) {
 		puts("Error: Insufficient Arguments.");
 		return 1;
 	}
-	
-	if ((pipe_wr = open("request_queue", O_WRONLY)) == -1){
+
+// Abrir um descritor de ficheiros do pipe criado pelo servidor para escrita
+	if ((pipe_wr = open("/tmp/request_queue", O_WRONLY)) == -1){
 		perror("File Descriptor");
-		return 1;
+		exit(-1);
 	}
-	
-	/* Concatenar argv numa só string pedido */
+
+// Construir string Comando a partir do argv
 	for (i = 1; i < argc; i++) {
-		strcat(pedido, argv[i]);
+		strcat(comando, argv[i]);
         if (argc > i+1)
-        	strcat(pedido, " ");
+        	strcat(comando, " ");
     }
-	n_bytes = strlen(pedido);
-    
-	/*Enviar o seu PID */
 
-	pid_t mine_pid = getpid();
-//	write(pipe_wr,&mine_pid,sizeof(pid_t));
-
-    /* Enviar pedido pelo pipe */
-	for (i = 0; i < 5; i++)
-	{
-	    write(pipe_wr, &n_bytes, sizeof(int));
-	    write(pipe_wr, pedido, strlen(pedido));
-	}
-	sleep(10);
-
-	if((close(pipe_wr))==-1){
-		perror("File Descriptor");
-		return 1;
-	}
+// Preparar request/mensagem 
+	request_size = produce_request(comando, request);
+ 
+ // Enviar request pelo pipe
+	write(pipe_wr, request, request_size);
+	
+	close(pipe_wr);
 	return 0;
 }
 
+
 /* 
-
-- Cliente manda stream de bits com tudo.
-- 4 bytes PID + 4 bytes n_bytes + nbytes = tamanho da stream de bites
-
 
 Relatório:
 
