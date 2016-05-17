@@ -32,7 +32,7 @@ int main(int argc, char const *argv[])
 		perror("Descritor de ficheiros");
 		return 1;
 	}
-
+	
 	int x=1;
 	while(x>0) { /* Ciclo à espera de pedidos dos clientes */
 		// ESTE CICLO FAZ SENTIDO ASSIM? -> NEVES
