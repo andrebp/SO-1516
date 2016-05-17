@@ -34,6 +34,11 @@ int main(int argc, char const *argv[])
     }
 	n_bytes = strlen(pedido);
     
+	/*Enviar o seu PID */
+
+	pid_t mine_pid = getpid();
+//	write(pipe_wr,&mine_pid,sizeof(pid_t));
+
     /* Enviar pedido pelo pipe */
 	for (i = 0; i < 5; i++)
 	{
@@ -41,6 +46,7 @@ int main(int argc, char const *argv[])
 	    write(pipe_wr, pedido, strlen(pedido));
 	}
 	sleep(10);
+	signal(SIGUSR2,signalhandler);
 	if((close(pipe_wr))==-1){
 		perror("File Descriptor");
 		return 1;
