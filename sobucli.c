@@ -13,7 +13,7 @@
 /* Função que produz uma mensagem com (PID do processo cliente + Tamanho Comando + Comando) */
 int produce_request(char * comando, char *request)
 {	 
-	int cmd_bytes, process_pid, i;
+	int cmd_bytes, process_pid, tamanho;
 	
 	// Construir o datagrama: 1) PID + 2) Tamanho Comando + 3) Comando 
 	// 1) PID
@@ -28,8 +28,9 @@ int produce_request(char * comando, char *request)
 	// Por 1), 2) e 3) na string request
 	snprintf(request, REQUEST_HEADER, "%d %d ", process_pid, cmd_bytes);
 	strcat(request, comando);
+	tamanho=strlen(request);
 
-	return (int) strlen(request);
+	return tamanho;
 }
 
 
@@ -53,6 +54,7 @@ int main(int argc, char const *argv[])
 	}
 
 // Construir string Comando a partir do argv
+	comando[0]='\0';
 	for (i = 1; i < argc; i++) {
 		strcat(comando, argv[i]);
         if (argc > i+1)

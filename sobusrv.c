@@ -45,7 +45,9 @@ int main(int argc, char const *argv[])
 	for(;;){
 		read_bytes = read(pipe_rd, request, REQUEST_MSIZE);
 		if (read_bytes <= 0 ) break;
-		write(1, request, read_bytes);
+		request[read_bytes]='\n'; request[read_bytes+1]='\0';
+		write(1, request, (read_bytes+1));
+		pipe_rd = open("/tmp/request_queue",O_RDONLY);
 	}
 
 	close(pipe_rd);
