@@ -101,7 +101,7 @@ int main(int argc, char const *argv[])
 					pipe(fd);
 					if(fork()==0){ // processo filho para executar sha1sum
 						//printf("%s\n", strcat(rs->call_dir,rs->targets[i]) );
-						dup2(fd[0],1);
+						dup2(fd[1],0);
 						close(fd[0]);
 						close(fd[1]);
 						execlp("sha1sum", "sha1sum", strcat(rs->call_dir, rs->targets[i]), NULL); // -> verificar o strcat outra vez <-
