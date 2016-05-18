@@ -26,7 +26,7 @@ int produce_request(char * comando, char *request)
 	// 3) A string comando é criada na main
 
 	// Por 1), 2) e 3) na string request
-	snprintf(request, REQUEST_HEADER, "%d %d ", process_pid, cmd_bytes);
+	snprintf(request, REQUEST_HEADER, "%d %d ", process_pid, cmd_bytes); // MUDAR O TAMANHO DO PID
 	strcat(request, comando);
 	tamanho=strlen(request);
 
