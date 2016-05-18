@@ -7,7 +7,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <signal.h>
-//#include <util.h>
+
 
 #define REQUEST_MSIZE 1024
 
@@ -17,8 +17,9 @@ typedef struct request_struct
 {
 	int pid;
 	int size;
-	char* action;
-	char** targets;	
+	char * action;
+	char * call_dir;
+	char ** targets;	
 }request_struct;
 
 
@@ -40,15 +41,15 @@ request_struct * requesthandler(char* client_request){
 	char* target = malloc(100*sizeof(char)); 
 	request_struct *rs = malloc(sizeof(request_struct));
 
-	rs->action=malloc(100*sizeof(char));
-	rs->targets=malloc(100*sizeof(char*));
+	rs->action = malloc(100*sizeof(char));
+	rs->call_dir = malloc(100*sizeof(char));
+	rs->targets = malloc(100*sizeof(char*));
 
 	rs->pid = atoi(strtok(client_request," "));
 	rs->size = atoi(strtok(NULL," "));
 	rs->action = strtok(NULL," ");
 	for(i=0;(target=strtok(NULL," "))!= NULL;i++){
 		rs->targets[i]=strdup(target);
-		printf("%s\n",rs->targets[i]);
 	}
 	
 	return rs;
@@ -60,24 +61,22 @@ int main(int argc, char const *argv[])
 	signal(SIGINT,signalhandler);
 	int read_bytes, i, fd[2];
 	char request[REQUEST_MSIZE], aux[256];
-	char* filname = malloc(256*sizeof(char));
-	char* usrname = strdup(getenv("USER"));
-	char* backup_path= malloc(1024*sizeof(char));
-	backup_path= "/home/";
-	
+	char * filename = malloc(256*sizeof(char));
+	char dir[128];
+	snprintf(dir, 128, "/home/%s/.Backup/", username);
 
 	
 /* Remover pipes ou ficheiros com o nome a ser usado */
-	unlink("/tmp/request_queue");
+	unlink(dir);
 
 /* Pipe onde chegam os pedidos */
-	if (mkfifo("/tmp/request_queue", 0777) < 0){
-		puts("Couldn't create request pipe");
+	if (mkfifo(dir, 0777) < 0){
+		puts("Couldn't create requested pipe");
 		exit(-1);
 	}
 
 /* Abrir um descritor de ficheiros do pipe acima criado para leitura */
-	if ((pipe_rd = open("/tmp/request_queue", O_RDONLY)) == -1){
+	if ((pipe_rd = open(dir, O_RDONLY)) == -1){
 		perror("File Descriptor");
 		exit(-1);
 	}
@@ -110,6 +109,7 @@ int main(int argc, char const *argv[])
 						// Receber resultado sha1sum, tirar o path à frente , apenas ficar com digest 
 						read(fd[0], aux, 256);
 						filename=strtok(aux," ");
+						close(fd[0]);
 						
 						if(fork()==0){ // Processo filho para comprimir o ficheiro em questão.
 							execlp("gzip", "gzip", filename, NULL);
@@ -130,12 +130,8 @@ int main(int argc, char const *argv[])
 
 							}
 						}
-
-						close(fd[0]);
 					}			
-
 				}
-
 			} else if(strcmp(rs->action,"restore")==0){
 
 
@@ -156,22 +152,11 @@ int main(int argc, char const *argv[])
 
 /*
 
-- Recebe-se um stream de bytes;
-- Fork e processa-se;
+CENAS POR FAZER: 
 
-// Ler o tamanho da string 
-read(pipe_rd, &n_bytes, sizeof(int)); 
-
-// Ler a string 
-if((read_bytes = read(pipe_rd, request, n_bytes)) > 0){ 
-	request[n_bytes] = '\0';
-	printf("Pedido: %s, Tamanho: %d;\n", request, n_bytes);
-} else { 	
-	puts("No Read");
-	end_of_execution = 1;
-	printf("%d\n", read_bytes);
-}
-
+- Receber novos pedidos
+- Mudar caminhos para dir e dir++data
+- RESTORE
 
 
 */

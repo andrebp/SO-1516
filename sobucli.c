@@ -5,74 +5,88 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <util.h>
+#include <pwd.h>
 
 #define REQUEST_MSIZE 1024
-#define REQUEST_HEADER 10
 
-/* Função que produz uma mensagem com (PID do processo cliente + Tamanho Comando + Comando) */
-int produce_request(char * comando, char *request)
+
+/* Função que produz uma mensagem com (PID do processo cliente +  Tamanho da Info + Diretoria de Trabalho + Comando) e devolve o
+	tamanho em bytes 
+*/
+int produce_request(char * comand, char *request)
 {	 
-	int cmd_bytes, process_pid, tamanho;
+	int info_bytes, process_pid, tamanho;
+	char c_work_dir[256];
 	
-	// Construir o datagrama: 1) PID + 2) Tamanho Comando + 3) Comando 
+	// Construir o datagrama: 1) PID + 2) Tamanho da Info + 3) Diretoria de Trabalho + 4) Comando 
 	// 1) PID
 	process_pid = (int)getpid();
-
- 	// 2) Tamanho Comando
-	cmd_bytes = strlen(comando);
-	printf("%s, %d\n", comando, cmd_bytes);
 	
-	// 3) A string comando é criada na main
+	// 3) Diretoria de Trabalho
+	getcwd(c_work_dir, sizeof(c_work_dir));
 
-	// Por 1), 2) e 3) na string request
-	snprintf(request, REQUEST_HEADER, "%d %d ", process_pid, cmd_bytes); // MUDAR O TAMANHO DO PID
-	strcat(request, comando);
-	tamanho=strlen(request);
+	// 4) A string comando é criada na main
 
+	// 2) Tamanho Info
+	info_bytes = strlen(comand) + strlen(c_work_dir) + 2; // +2 Separador (espaço) + '\0'
+
+	// Por tudo na string request
+	snprintf(request, REQUEST_MSIZE, "%d %d %s %s", process_pid, info_bytes, c_work_dir, comand);
+	printf("%s\n", request);
+
+	tamanho = strlen(request) + 1; // +1 Para o carater de terminação /home/USER/.Backup/
 	return tamanho;
 }
-
 
 int main(int argc, char const *argv[])
 {
 	int pipe_wr;
 	char request[REQUEST_MSIZE];
-	char comando[REQUEST_MSIZE-REQUEST_HEADER];
+	char comand[REQUEST_MSIZE-15];
 	int i, request_size;
+	char * username = strdup(getpwuid(getuid())->pw_name);
+	char dir[128];
+	snprintf(dir, 128, "/home/%s/.Backup/", username);
 
- // Argumentos insuficientes 
+// Argumentos insuficientes 
 	if (argc < 3) {
 		puts("Error: Insufficient Arguments.");
 		return 1;
 	}
 
 // Abrir um descritor de ficheiros do pipe criado pelo servidor para escrita
-	if ((pipe_wr = open("/tmp/request_queue", O_WRONLY)) == -1){
+	if ((pipe_wr = open(dir, O_WRONLY)) == -1){
 		perror("File Descriptor");
 		exit(-1);
 	}
 
 // Construir string Comando a partir do argv
-	comando[0]='\0';
+	comand[0]='\0';
 	for (i = 1; i < argc; i++) {
-		strcat(comando, argv[i]);
+		strcat(comand, argv[i]);
         if (argc > i+1)
-        	strcat(comando, " ");
+        	strcat(comand, " ");
     }
 
 // Preparar request/mensagem 
-	request_size = produce_request(comando, request);
- 
- // Enviar request pelo pipe
-	write(pipe_wr, request, request_size+1);
+	request_size = produce_request(comand, request);
+
+// Enviar request pelo pipe
+	write(pipe_wr, request, request_size);
 	
+// Esperar pelos sinais do cenas
+
 	close(pipe_wr);
 	return 0;
 }
 
 
 /* 
+
+-- CENAS POR FAZER NO CLIENTE:
+
+RECEBER SINAIS,
+TRADUZIR EXPRESSÕES REGULARES.
 
 Relatório:
 
