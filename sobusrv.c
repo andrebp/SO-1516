@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <pwd.h>
 
 
 #define REQUEST_MSIZE 1024
@@ -17,8 +18,8 @@ typedef struct request_struct
 {
 	int pid;
 	int size;
-	char * action;
 	char * call_dir;
+	char * action;
 	char ** targets;	
 }request_struct;
 
@@ -47,6 +48,7 @@ request_struct * requesthandler(char* client_request){
 
 	rs->pid = atoi(strtok(client_request," "));
 	rs->size = atoi(strtok(NULL," "));
+	rs->call_dir = strtok(NULL," "); // Não funciona se alguma pasta tiver espaços no nome
 	rs->action = strtok(NULL," ");
 	for(i=0;(target=strtok(NULL," "))!= NULL;i++){
 		rs->targets[i]=strdup(target);
@@ -62,8 +64,9 @@ int main(int argc, char const *argv[])
 	int read_bytes, i, fd[2];
 	char request[REQUEST_MSIZE], aux[256];
 	char * filename = malloc(256*sizeof(char));
+	char * username = strdup(getpwuid(getuid())->pw_name);
 	char dir[128];
-	snprintf(dir, 128, "/home/%s/.Backup/", username);
+	snprintf(dir, 128, "/home/%s/.Backup/pipe", username);
 
 	
 /* Remover pipes ou ficheiros com o nome a ser usado */
@@ -97,15 +100,19 @@ int main(int argc, char const *argv[])
 				for(i=0; rs->targets[i]!=NULL ;i++){
 					pipe(fd);
 					if(fork()==0){ // processo filho para executar sha1sum
-						dup2(fd[0],1)
+						//printf("%s\n", strcat(rs->call_dir,rs->targets[i]) );
+						dup2(fd[0],1);
 						close(fd[0]);
 						close(fd[1]);
-						execlp("sha1sum", "sha1sum", strcat(rs->path, rs->targets[i]), NULL); // -> verificar o strcat outra vez <-
+						execlp("sha1sum", "sha1sum", strcat(rs->call_dir, rs->targets[i]), NULL); // -> verificar o strcat outra vez <-
 						perror("Failed to execute sha1sum\n");
 						//sinal a enviar ao cliente a avisar que falhou
 						_exit(-1);
 					} else { // processo pai 
 						close(fd[1]); 
+
+						//adicionar o wait para que o sha1sum seja feito antes do gzip and so on.
+						
 						// Receber resultado sha1sum, tirar o path à frente , apenas ficar com digest 
 						read(fd[0], aux, 256);
 						filename=strtok(aux," ");
@@ -123,9 +130,9 @@ int main(int argc, char const *argv[])
 								//sinal a enviar ao cliente a avisar que falhou
 								_exit(-1);								
 							} else { // Processo pai escreve no ficheiro metadata a ligação para o ficheiro na diretoria /data
-								char link_metadata[1024] = '\0';
-								char digest_filename[]
-								int tam=strlen(filename)
+								char link_metadata[1024]/* = '\0'*/;
+								char digest_filename[256];
+								int tam=strlen(filename);
 								snprintf(link_metadata, tam, "%s -> %s", rs->targets[i], filename);
 
 							}

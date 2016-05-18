@@ -24,6 +24,7 @@ int produce_request(char * comand, char *request)
 	
 	// 3) Diretoria de Trabalho
 	getcwd(c_work_dir, sizeof(c_work_dir));
+	c_work_dir[strlen(c_work_dir)]='/'; c_work_dir[strlen(c_work_dir)+1]='\0';
 
 	// 4) A string comando é criada na main
 
@@ -46,7 +47,7 @@ int main(int argc, char const *argv[])
 	int i, request_size;
 	char * username = strdup(getpwuid(getuid())->pw_name);
 	char dir[128];
-	snprintf(dir, 128, "/home/%s/.Backup/", username);
+	snprintf(dir, 128, "/home/%s/.Backup/pipe", username);
 
 // Argumentos insuficientes 
 	if (argc < 3) {
