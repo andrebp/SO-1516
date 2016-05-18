@@ -17,3 +17,8 @@ sobusrv:
 sobucli:
 	Estabelece conexões com o servidor e faz o que tem a fazer.
 	Cliente não lê nem escreve ficheiros. Só faz pedidos.
+
+to do list:
+	cliente traduz expressões regulares.
+	fazer forks (fazer o "pedido" num filho).
+	signal para o cliente.

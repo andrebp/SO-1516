@@ -11,6 +11,15 @@
 
 #define REQUEST_MSIZE 1024
 
+typedef struct request_struct
+{
+	int pid;
+	int size;
+	char* action;
+	char* location;	
+}request_struct;
+
+
 typedef void (*sighandler_t)(int);
 
 void signalhandler(int sign){
@@ -20,11 +29,31 @@ void signalhandler(int sign){
 	}
 }
 
+
+request_struct * requesthandler(char* client_request){
+	
+	request_struct *rs = malloc(sizeof(request_struct));
+
+	rs->action=malloc(100*sizeof(char));
+	rs->location=malloc(100*sizeof(char));
+
+	rs->pid = atoi(strtok(client_request," "));
+	rs->size = atoi(strtok(NULL," "));
+	rs->action = strtok(NULL," ");
+	rs->location = strtok(NULL," ");
+	
+	
+
+	return rs;
+
+}
+
 int main(int argc, char const *argv[])
 {
 	signal(SIGINT,signalhandler);
 	int pipe_rd, read_bytes;
 	char request[REQUEST_MSIZE];
+	request_struct *rs = malloc(sizeof(request_struct));
 
 /* Remover pipes ou ficheiros com o nome a ser usado */
 	unlink("/tmp/request_queue");
@@ -44,9 +73,12 @@ int main(int argc, char const *argv[])
 /* Receber um pedido (bit stream) e fazer o que ele pede */
 	for(;;){
 		read_bytes = read(pipe_rd, request, REQUEST_MSIZE);
-		if (read_bytes <= 0 ) break;
+		/*if (read_bytes <= 0 ) break;
 		request[read_bytes]='\n'; request[read_bytes+1]='\0';
-		write(1, request, (read_bytes+1));
+		write(1, request, (read_bytes+1));*/
+		rs=requesthandler(request);
+		
+		
 		pipe_rd = open("/tmp/request_queue",O_RDONLY);
 	}
 

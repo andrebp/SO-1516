@@ -65,7 +65,7 @@ int main(int argc, char const *argv[])
 	request_size = produce_request(comando, request);
  
  // Enviar request pelo pipe
-	write(pipe_wr, request, request_size);
+	write(pipe_wr, request, request_size+1);
 	
 	close(pipe_wr);
 	return 0;
