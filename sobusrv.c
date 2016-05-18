@@ -119,23 +119,23 @@ int main(int argc, char const *argv[])
 						close(fd[0]);
 						
 						if(fork()==0){ // Processo filho para comprimir o ficheiro em questão.
-							execlp("gzip", "gzip", filename, NULL);
+							execlp("gzip", "gzip", rs->targets[i], NULL);
 							perror("Failed to execute gzip");
 							//sinal a enviar ao cliente a avisar que falhou
 							_exit(-1);
-						} else {
+						} else {/*
 							if(fork()==0){// Processo filho para mover o ficheiro para a diretoria /home/user/.Backup/data
-								execlp("mv", "mv", filename, "/home/user/.Backup/data", NULL);
+								execlp("mv", "mv", filename, "/home/user/.Backup/data/", NULL);
 								perror("Failed to move file");
 								//sinal a enviar ao cliente a avisar que falhou
 								_exit(-1);								
 							} else { // Processo pai escreve no ficheiro metadata a ligação para o ficheiro na diretoria /data
-								char link_metadata[1024]/* = '\0'*/;
+								char link_metadata[1024]/* = '\0'*//*;
 								char digest_filename[256];
 								int tam=strlen(filename);
 								snprintf(link_metadata, tam, "%s -> %s", rs->targets[i], filename);
 
-							}
+							}*/
 						}
 					}			
 				}
@@ -149,7 +149,7 @@ int main(int argc, char const *argv[])
 		
 		
 		close(pipe_rd);
-		pipe_rd = open("/tmp/request_queue",O_RDONLY);
+		pipe_rd = open(dir, O_RDONLY);
 	}
 
 
