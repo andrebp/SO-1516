@@ -13,6 +13,7 @@
 #define REQUEST_MSIZE 1024
 
 int pipe_rd;
+char pipe_path[128];
 
 typedef struct request_struct
 {
@@ -30,7 +31,7 @@ void signalhandler(int sign){
 	if(sign == SIGINT){
 		printf("\nServer closing\n");
 		close(pipe_rd);
-		unlink("/tmp/request_queue");
+		unlink(pipe_path);
 		exit(1);
 	}
 }
@@ -63,23 +64,27 @@ int main(int argc, char const *argv[])
 	signal(SIGINT,signalhandler);
 	int read_bytes, i, fd[2];
 	char request[REQUEST_MSIZE], aux[256];
-	char * filename = malloc(256*sizeof(char));
+	char * digest = malloc(128*sizeof(char));
 	char * username = strdup(getpwuid(getuid())->pw_name);
-	char dir[128];
-	snprintf(dir, 128, "/home/%s/.Backup/pipe", username);
-
+	char root_path[128];
+	char data_path[128];
+	char metadata_path[128];
+	snprintf(root_path, 128, "/home/%s/.Backup/", username);
+	snprintf(pipe_path, 128, "%spipe", root_path);
+	snprintf(data_path, 128, "%sdata/", root_path);
+	snprintf(metadata_path, 128, "%smetadata/", root_path);
 	
 /* Remover pipes ou ficheiros com o nome a ser usado */
-	unlink(dir);
+	unlink(pipe_path);
 
 /* Pipe onde chegam os pedidos */
-	if (mkfifo(dir, 0777) < 0){
+	if (mkfifo(pipe_path, 0777) < 0){
 		puts("Couldn't create requested pipe");
 		exit(-1);
 	}
 
 /* Abrir um descritor de ficheiros do pipe acima criado para leitura */
-	if ((pipe_rd = open(dir, O_RDONLY)) == -1){
+	if ((pipe_rd = open(pipe_path, O_RDONLY)) == -1){
 		perror("File Descriptor");
 		exit(-1);
 	}
@@ -99,45 +104,61 @@ int main(int argc, char const *argv[])
 
 				for(i=0; rs->targets[i]!=NULL ;i++){
 					pipe(fd);
+					char target_path[128];
+					snprintf(target_path, 128, "%s%s", rs->call_dir, rs->targets[i]);
 					if(fork()==0){ // processo filho para executar sha1sum
-						//printf("%s\n", strcat(rs->call_dir,rs->targets[i]) );
 						dup2(fd[1],0);
 						close(fd[0]);
 						close(fd[1]);
-						execlp("sha1sum", "sha1sum", strcat(rs->call_dir, rs->targets[i]), NULL); // -> verificar o strcat outra vez <-
+						execlp("sha1sum", "sha1sum", target_path, NULL); // -> verificar o strcat outra vez  <-----
 						perror("Failed to execute sha1sum\n");
-						//sinal a enviar ao cliente a avisar que falhou
 						_exit(-1);
 					} else { // processo pai 
 						close(fd[1]); 
 
-						//adicionar o wait para que o sha1sum seja feito antes do gzip and so on.
+						//adicionar o wait para que o sha1sum seja feito antes do gzip ou parar caso corra mal (SIGNAL) <----- CONTINUE ;P
 						
 						// Receber resultado sha1sum, tirar o path à frente , apenas ficar com digest 
 						read(fd[0], aux, 256);
-						filename=strtok(aux," ");
+						digest=strtok(aux," ");
 						close(fd[0]);
 						
 						if(fork()==0){ // Processo filho para comprimir o ficheiro em questão.
-							execlp("gzip", "gzip", rs->targets[i], NULL);
+							/* FALTA NAO APAGAR O FICHEIRO ORIGEM */
+							execlp("gzip", "gzip", target_path, NULL);
 							perror("Failed to execute gzip");
-							//sinal a enviar ao cliente a avisar que falhou
 							_exit(-1);
-						} else {/*
-							if(fork()==0){// Processo filho para mover o ficheiro para a diretoria /home/user/.Backup/data
-								execlp("mv", "mv", filename, "/home/user/.Backup/data/", NULL);
-								perror("Failed to move file");
-								//sinal a enviar ao cliente a avisar que falhou
-								_exit(-1);								
-							} else { // Processo pai escreve no ficheiro metadata a ligação para o ficheiro na diretoria /data
-								char link_metadata[1024]/* = '\0'*//*;
-								char digest_filename[256];
-								int tam=strlen(filename);
-								snprintf(link_metadata, tam, "%s -> %s", rs->targets[i], filename);
 
-							}*/
+						} else {
+							//adicionar o wait para que o sha1sum seja feito antes do move ou parar cenas caso corra mal.(SIGNAL) <----- CONTINUE ;P
+
+							if(fork()==0){// Processo filho para mover o ficheiro para a diretoria /home/user/.Backup/data/ com o nome do digest
+								char move_path[256];
+								snprintf(move_path, 256, "%s%s", root_path, digest);
+								execlp("mv", "mv", target_path, move_path, NULL);
+								perror("Failed to move file");
+								//sinal a enviar ao cliente a avisar que falhou <-----
+								_exit(-1);								
+							} else { // Processo pai escreve no ficheiro metadata a ligação para o ficheiro na diretoria /metadata
+
+								//adicionar o wait para que o move seja feito antes dum novo cenas ou parar caso corra mal.(SIGNAL) <----- CONTINUE ;P
+
+								if(fork()==0){//Processo filho para criar o link na diretoria /home/user/.Backup/metadata/ com o nome do digest
+									char link_path[256];
+									snprintf(link_path, 256, "%s%s", metadata_path, digest);
+									execlp("ln", "ln", "-s", move_path, link_path, ,NULL);
+									puts("Couldn't create symlink");
+									_exit(-1);
+								} else { // Processo pai espera que a operação do filho acabe enviando um resultado ao cliente (SIGNAL)
+ 
+									//adicionar o wait
+								}
+							}
 						}
-					}			
+					}
+
+					/* Sinal ao cliente que correu bem */			
+				
 				}
 			} else if(strcmp(rs->action,"restore")==0){
 
@@ -145,15 +166,10 @@ int main(int argc, char const *argv[])
 			}
 
 
-		}// O processo pai simplesmente avança para o próximo pedido.
-		
-		
+		}// O processo pai simplesmente avança para o próximo pedido abrindo e fechando o pipe de modo a bloquear novamente.
 		close(pipe_rd);
-		pipe_rd = open(dir, O_RDONLY);
+		pipe_rd = open(pipe_path,O_RDONLY);
 	}
-
-
-	
 	return 0;
 }
 
@@ -161,9 +177,10 @@ int main(int argc, char const *argv[])
 
 CENAS POR FAZER: 
 
-- Receber novos pedidos
-- Mudar caminhos para dir e dir++data
+- FALTA GZIP NAO FODER O FICHEIRO DE ORIGEM
 - RESTORE
+- IMPEDIR O PROCESSO DE CONTINUAR SE DER MERDA A MEIO
+- SINAL AO CLIENTE SE CORRER MAL
 
 
 */
