@@ -93,7 +93,7 @@ int main(int argc, char const *argv[])
 // Enviar request pelo pipe
 	write(pipe_wr, request, request_size);
 	
-// Esperar pelos sinais do cenas
+// Esperar pelos sinais do servidor
 
 	close(pipe_wr);
 
@@ -106,8 +106,11 @@ int main(int argc, char const *argv[])
 
 -- CENAS POR FAZER NO CLIENTE:
 
-RECEBER SINAIS,
-TRADUZIR EXPRESSÕES REGULARES.
+TESTAR COM VÁRIOS FICHEIROS!!!
+
+- RECEBER SINAIS NO GERAL.
+- TRADUZIR EXPRESSÕES REGULARES.
+
 
 Relatório:
 

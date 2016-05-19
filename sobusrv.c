@@ -250,9 +250,14 @@ int main(int argc, char const *argv[])
 
 CENAS POR FAZER: 
 
-- ROLLBACK NAS CENAS MAL
-- SINAL AO CLIENTE SE CORRER MAL
-- IMPEDIR MAIS DE 5 LIGAÇÕES
+TESTAR COM VÁRIOS FICHEIROS!!!
+
+- SINAL AO CLIENTE SE CORRER MAL 	<- CHECKAR COMO ESTÁ.
+- IMPEDIR MAIS DE 5 LIGAÇÕES		<- Duas hipoteses quando o servidor recebe um pedido e já está a fazer 5:
+												- Manda o sexto foder com um signal que o user entende como Server busy.
+												- Só lê do pipe quando tiver <5 pedidos ativos, poe-se o main process a dormir
+													e acorda-se quando um requestHandler acabar.
+- ROLLBACK NAS CENAS MAL 			<- Dá muito trabalho.
 
 - TRABALHO FUTURO -> CRIAR UMA TABELA ONDE NUMERO DE SIGNALS == SITIO ESPECIFICO DA FALHA DA EXECUÇÂO
 
