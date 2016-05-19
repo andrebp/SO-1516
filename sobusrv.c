@@ -113,8 +113,9 @@ int main(int argc, char const *argv[])
 						close(fd[1]);
 						execlp("sha1sum", "sha1sum", target_path, NULL); 
 						perror("Failed to execute sha1sum\n");
+						kill(rs->pid,SIGUSR2);
 						_exit(-1);
-					} else { // processo pai     O read não está a ler nada, check this  
+					} else { // processo pai     Como verificar se o exec anterior falhou?
 						close(fd[1]); 
 						wait(0);
 						//adicionar o wait para que o sha1sum seja feito antes do gzip ou parar caso corra mal (SIGNAL) <----- CONTINUE ;P
@@ -122,7 +123,6 @@ int main(int argc, char const *argv[])
 						// Receber resultado sha1sum, tirar o path à frente , apenas ficar com digest 
 						read(fd[0], aux, 256);
 						digest=strtok(aux," ");
-						printf("O digest é %s\n", aux );
 						close(fd[0]);
 						
 						if(fork()==0){ // Processo filho para comprimir o ficheiro em questão.
@@ -134,9 +134,9 @@ int main(int argc, char const *argv[])
 							wait(0);
 							//adicionar o wait para que o sha1sum seja feito antes do move ou parar cenas caso corra mal.(SIGNAL) <----- CONTINUE ;P
 							char move_path[256];
-							snprintf(move_path, 256, "%s%s", data_path, digest);
+							snprintf(move_path, 256, "%s%s.gz", data_path, digest);
+							strcat(target_path,".gz");
 							if(fork()==0){// Processo filho para mover o ficheiro para a diretoria /home/user/.Backup/data/ com o nome do digest
-								strcat(target_path,".gz");	
 								execlp("mv", "mv", target_path, move_path, NULL);
 								perror("Failed to move file");
 								//sinal a enviar ao cliente a avisar que falhou <-----
@@ -147,8 +147,8 @@ int main(int argc, char const *argv[])
 
 								if(fork()==0){//Processo filho para criar o link na diretoria /home/user/.Backup/metadata/ com o nome do digest
 									char link_path[256];
-									snprintf(link_path, 256, "%s%s", metadata_path, digest);
-									execlp("ln", "ln", "-s", move_path, link_path, NULL);
+									snprintf(link_path, 256, "%s%s", metadata_path, rs->targets[i]);
+									execlp("ln", "ln", "-s", "-T", move_path, link_path, NULL);
 									puts("Couldn't create symlink");
 									_exit(-1);
 								} else { // Processo pai espera que a operação do filho acabe enviando um resultado ao cliente (SIGNAL)
@@ -159,12 +159,57 @@ int main(int argc, char const *argv[])
 						}
 					}
 
-					/* Sinal ao cliente que correu bem */			
+					/* Sinal ao cliente que correu bem */	
+					kill(rs->pid,SIGUSR1);		
 				
 				}
 			} else if(strcmp(rs->action,"restore")==0){
+				/* Percorrer todos os pedidos */
+				for(i=0;rs->targets[i] != NULL; i++){
+					pipe(fd);
+					if(fork()==0){ //processo filho que vai buscar o path do link do ficheiro a fazer restore
+						dup2(fd[1],1);
+						close(fd[0]);
+						close(fd[1]);
+						char link_path[256];
+						snprintf(link_path, 256, "%s%s", metadata_path, rs->targets[i]);
+						execlp("readlink", "readlink", "-f", "-n", link_path, NULL); // flag '-n' serve para tirar o \n no final da string
+						puts("Couldn't obtain link");
+						_exit(-1);
+					} else {
+						close(fd[1]);
+						wait(0);
+						char * symbolic_link = malloc(256*sizeof(char));
+						read(fd[0],symbolic_link,256); //path da diretoria data/ onde está o ficheiro a ser restored
+						close(fd[0]);
 
+						if(fork()==0){ // Processo filho para descomprimir o ficheiro
 
+							execlp("gunzip", "gunzip", "-f", "-k", symbolic_link, NULL);
+							perror("Failed to execute gunzip");
+							_exit(-1);
+
+						} else { // Neste ponto, o ficheiro está restaurado, mas encontra-se na diretoria data, move-se agora para a diretoria de trabalho do user
+							
+							wait(0);
+							if(fork()==0){ // processo filho para mover o ficheiro para a diretoria de trabalho
+								symbolic_link[strlen(symbolic_link)-3]='\0'; // Retirar o .gz, o mv deve ser aplicado ao ficheiro e não ao ficheiro comprimido
+								strcat(rs->call_dir,rs->targets[i]);
+								execlp("mv", "mv", symbolic_link, rs->call_dir, NULL);
+								perror("Failed to move file");
+								_exit(-1);
+							} else {
+								wait(0);
+
+							}
+
+						}
+
+					}
+
+				}
+
+				kill(rs->pid,SIGUSR1);
 			}
 
 		_exit(0); // Processo que atende o pedido do cliente, sai.

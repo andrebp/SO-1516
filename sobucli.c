@@ -5,9 +5,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <pwd.h>
 
 #define REQUEST_MSIZE 1024
+
+int controlo = 1; /* alterar esta variavel para o numero de pedidos do cliente. Assim, o programa sobucli só termina quando todos acabarem e não apenas quando 1 acaba*/
+
+typedef void (*sighandler_t)(int);
+
+void signalhandler(int sign){
+	if(sign == SIGUSR2){
+		printf("Ocorreu um erro.\n");
+		controlo = 0;
+	}
+	else if(sign == SIGUSR1){
+		printf("Operação concluida com sucesso\n");
+		controlo = 0;
+	}
+}
 
 
 /* Função que produz uma mensagem com (PID do processo cliente +  Tamanho da Info + Diretoria de Trabalho + Comando) e devolve o
@@ -41,6 +57,8 @@ int produce_request(char * comand, char *request)
 
 int main(int argc, char const *argv[])
 {
+	signal(SIGUSR2,signalhandler);
+	signal(SIGUSR1,signalhandler);
 	int pipe_wr;
 	char request[REQUEST_MSIZE];
 	char comand[REQUEST_MSIZE-15];
@@ -78,6 +96,8 @@ int main(int argc, char const *argv[])
 // Esperar pelos sinais do cenas
 
 	close(pipe_wr);
+
+	while(controlo==1);
 	return 0;
 }
 
