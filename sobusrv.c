@@ -131,10 +131,10 @@ int main(int argc, char const *argv[])
 
 						} else {
 							//adicionar o wait para que o sha1sum seja feito antes do move ou parar cenas caso corra mal.(SIGNAL) <----- CONTINUE ;P
-
+							char move_path[256];
+							snprintf(move_path, 256, "%s%s", root_path, digest);
 							if(fork()==0){// Processo filho para mover o ficheiro para a diretoria /home/user/.Backup/data/ com o nome do digest
-								char move_path[256];
-								snprintf(move_path, 256, "%s%s", root_path, digest);
+								strcat(target_path,".gz");	// verificar o nome , está a cagar '?'
 								execlp("mv", "mv", target_path, move_path, NULL);
 								perror("Failed to move file");
 								//sinal a enviar ao cliente a avisar que falhou <-----
@@ -146,7 +146,7 @@ int main(int argc, char const *argv[])
 								if(fork()==0){//Processo filho para criar o link na diretoria /home/user/.Backup/metadata/ com o nome do digest
 									char link_path[256];
 									snprintf(link_path, 256, "%s%s", metadata_path, digest);
-									execlp("ln", "ln", "-s", move_path, link_path, ,NULL);
+									execlp("ln", "ln", "-s", move_path, link_path, NULL);
 									puts("Couldn't create symlink");
 									_exit(-1);
 								} else { // Processo pai espera que a operação do filho acabe enviando um resultado ao cliente (SIGNAL)
