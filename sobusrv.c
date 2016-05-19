@@ -63,9 +63,8 @@ request_struct * requesthandler(char* client_request){
 int main(int argc, char const *argv[])
 {
 	signal(SIGINT,signalhandler);
-	int read_bytes, i, fd[2];
-	char request[REQUEST_MSIZE], aux[256];
-	char * digest = malloc(128*sizeof(char));
+	int read_bytes, i, fd[2], status;
+	char request[REQUEST_MSIZE];
 	char * username = strdup(getpwuid(getuid())->pw_name);
 	char root_path[128];
 	char data_path[128];
@@ -98,8 +97,7 @@ int main(int argc, char const *argv[])
 		// Transformação da string para a estrutura
 		rs=requesthandler(request);
 		// Tratar do pedido para os filhos
-		if(fork()==0){ // No filho
-			// 2 Coisas a fazer: Fazer o pedido e enviar um signal resultado ao cli
+		if(fork()==0){ // Criar um processo requestHandler que trata do pedido recebido e sinaliza o cliente do sucesso ou insucesso.
 
 			if(strcmp(rs->action,"backup")==0){
 
@@ -113,15 +111,20 @@ int main(int argc, char const *argv[])
 						close(fd[1]);
 						execlp("sha1sum", "sha1sum", target_path, NULL); 
 						perror("Failed to execute sha1sum\n");
-						kill(rs->pid,SIGUSR2);
 						_exit(-1);
-					} else { // processo pai     Como verificar se o exec anterior falhou?
+					} else { // Processo requestHandler
 						close(fd[1]); 
-						wait(0);
-						//adicionar o wait para que o sha1sum seja feito antes do gzip ou parar caso corra mal (SIGNAL) <----- CONTINUE ;P
 						
+						wait(&status);
+						if(!WIFEXITED(status)){
+							kill(rs->pid,SIGUSR2);
+							continue;
+						}
+
 						// Receber resultado sha1sum, tirar o path à frente , apenas ficar com digest 
-						read(fd[0], aux, 256);
+						char aux[128];
+						read(fd[0], aux, 128);
+						char * digest = malloc(128*sizeof(char));
 						digest=strtok(aux," ");
 						close(fd[0]);
 						
@@ -130,9 +133,14 @@ int main(int argc, char const *argv[])
 							perror("Failed to execute gzip");
 							_exit(-1);
 
-						} else {
-							wait(0);
-							//adicionar o wait para que o sha1sum seja feito antes do move ou parar cenas caso corra mal.(SIGNAL) <----- CONTINUE ;P
+						} else { // Processo requestHandler
+
+							wait(&status);/* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
+							if(!WIFEXITED(status)){
+								kill(rs->pid,SIGUSR2);
+								continue;
+							}
+
 							char move_path[256];
 							snprintf(move_path, 256, "%s%s.gz", data_path, digest);
 							strcat(target_path,".gz");
@@ -141,9 +149,14 @@ int main(int argc, char const *argv[])
 								perror("Failed to move file");
 								//sinal a enviar ao cliente a avisar que falhou <-----
 								_exit(-1);								
-							} else { // Processo pai escreve no ficheiro metadata a ligação para o ficheiro na diretoria /metadata
-								wait(0);
-								//adicionar o wait para que o move seja feito antes dum novo cenas ou parar caso corra mal.(SIGNAL) <----- CONTINUE ;P
+							} else { // // Processo requestHandler
+								
+								wait(&status); /* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
+								if(!WIFEXITED(status)){
+									kill(rs->pid,SIGUSR2);
+									/* Executar um rm para limpar o ficheiro comprido que não foi movido */
+									continue;
+								}
 
 								if(fork()==0){//Processo filho para criar o link na diretoria /home/user/.Backup/metadata/ com o nome do digest
 									char link_path[256];
@@ -151,17 +164,20 @@ int main(int argc, char const *argv[])
 									execlp("ln", "ln", "-s", "-T", move_path, link_path, NULL);
 									puts("Couldn't create symlink");
 									_exit(-1);
-								} else { // Processo pai espera que a operação do filho acabe enviando um resultado ao cliente (SIGNAL)
- 
-									//adicionar o wait
+								} else { // // Processo requestHandler
+									
+									wait(&status); /* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
+									if(!WIFEXITED(status)){
+										kill(rs->pid,SIGUSR2);
+										/* Executar um rm para limpar o ficheiro na pasta data */
+										continue;
+									}
+									/* Sinal ao cliente que correu bem */	
+									kill(rs->pid,SIGUSR1);		
 								}
 							}
 						}
 					}
-
-					/* Sinal ao cliente que correu bem */	
-					kill(rs->pid,SIGUSR1);		
-				
 				}
 			} else if(strcmp(rs->action,"restore")==0){
 				/* Percorrer todos os pedidos */
@@ -176,9 +192,15 @@ int main(int argc, char const *argv[])
 						execlp("readlink", "readlink", "-f", "-n", link_path, NULL); // flag '-n' serve para tirar o \n no final da string
 						puts("Couldn't obtain link");
 						_exit(-1);
-					} else {
+					} else { // Processo requestHandler
 						close(fd[1]);
-						wait(0);
+
+						wait(&status); /* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
+						if(!WIFEXITED(status)){
+							kill(rs->pid,SIGUSR2);
+							continue;
+						}
+
 						char * symbolic_link = malloc(256*sizeof(char));
 						read(fd[0],symbolic_link,256); //path da diretoria data/ onde está o ficheiro a ser restored
 						close(fd[0]);
@@ -191,29 +213,33 @@ int main(int argc, char const *argv[])
 
 						} else { // Neste ponto, o ficheiro está restaurado, mas encontra-se na diretoria data, move-se agora para a diretoria de trabalho do user
 							
-							wait(0);
+							wait(&status); /* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
+							if(!WIFEXITED(status)){
+								kill(rs->pid,SIGUSR2);
+								continue;
+							}
+
 							if(fork()==0){ // processo filho para mover o ficheiro para a diretoria de trabalho
 								symbolic_link[strlen(symbolic_link)-3]='\0'; // Retirar o .gz, o mv deve ser aplicado ao ficheiro e não ao ficheiro comprimido
 								strcat(rs->call_dir,rs->targets[i]);
 								execlp("mv", "mv", symbolic_link, rs->call_dir, NULL);
 								perror("Failed to move file");
 								_exit(-1);
-							} else {
-								wait(0);
-
+							} else { // Processo requestHandler
+								wait(&status); /* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
+								if(!WIFEXITED(status)){
+									kill(rs->pid,SIGUSR2);
+									continue;
+								}
+								kill(rs->pid,SIGUSR1); /* Sinalizar ao que a operação para este ficheiro correu bem */
 							}
-
 						}
-
 					}
-
 				}
-
-				kill(rs->pid,SIGUSR1);
 			}
-
-		_exit(0); // Processo que atende o pedido do cliente, sai.
-		}// O processo pai simplesmente avança para o próximo pedido abrindo e fechando o pipe de modo a bloquear novamente.
+		_exit(0); // Processo que atende o pedido, requesthandler, sai.
+		}/* Processo principal do servidor simplesmente avança para o próximo pedido 
+				abrindo e fechando o pipe de modo a bloquear novamente, e criando um novo requestHandler pro novo pedido */
 		close(pipe_rd);
 		pipe_rd = open(pipe_path,O_RDONLY);
 	}
@@ -224,9 +250,11 @@ int main(int argc, char const *argv[])
 
 CENAS POR FAZER: 
 
-- RESTORE
-- IMPEDIR O PROCESSO DE CONTINUAR SE DER MERDA A MEIO
+- ROLLBACK NAS CENAS MAL
 - SINAL AO CLIENTE SE CORRER MAL
+- IMPEDIR MAIS DE 5 LIGAÇÕES
+
+- TRABALHO FUTURO -> CRIAR UMA TABELA ONDE NUMERO DE SIGNALS == SITIO ESPECIFICO DA FALHA DA EXECUÇÂO
 
 
 */
