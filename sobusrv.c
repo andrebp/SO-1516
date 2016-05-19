@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,40 +108,41 @@ int main(int argc, char const *argv[])
 					char target_path[128];
 					snprintf(target_path, 128, "%s%s", rs->call_dir, rs->targets[i]);
 					if(fork()==0){ // processo filho para executar sha1sum
-						dup2(fd[1],0);
+						dup2(fd[1],1);
 						close(fd[0]);
 						close(fd[1]);
-						execlp("sha1sum", "sha1sum", target_path, NULL); // -> verificar o strcat outra vez  <-----
+						execlp("sha1sum", "sha1sum", target_path, NULL); 
 						perror("Failed to execute sha1sum\n");
 						_exit(-1);
-					} else { // processo pai 
+					} else { // processo pai     O read não está a ler nada, check this  
 						close(fd[1]); 
-
+						wait(0);
 						//adicionar o wait para que o sha1sum seja feito antes do gzip ou parar caso corra mal (SIGNAL) <----- CONTINUE ;P
 						
 						// Receber resultado sha1sum, tirar o path à frente , apenas ficar com digest 
 						read(fd[0], aux, 256);
 						digest=strtok(aux," ");
+						printf("O digest é %s\n", aux );
 						close(fd[0]);
 						
 						if(fork()==0){ // Processo filho para comprimir o ficheiro em questão.
-							/* FALTA NAO APAGAR O FICHEIRO ORIGEM */
-							execlp("gzip", "gzip", target_path, NULL);
+							execlp("gzip", "gzip","-k" ,target_path, NULL);
 							perror("Failed to execute gzip");
 							_exit(-1);
 
 						} else {
+							wait(0);
 							//adicionar o wait para que o sha1sum seja feito antes do move ou parar cenas caso corra mal.(SIGNAL) <----- CONTINUE ;P
 							char move_path[256];
-							snprintf(move_path, 256, "%s%s", root_path, digest);
+							snprintf(move_path, 256, "%s%s", data_path, digest);
 							if(fork()==0){// Processo filho para mover o ficheiro para a diretoria /home/user/.Backup/data/ com o nome do digest
-								strcat(target_path,".gz");	// verificar o nome , está a cagar '?'
+								strcat(target_path,".gz");	
 								execlp("mv", "mv", target_path, move_path, NULL);
 								perror("Failed to move file");
 								//sinal a enviar ao cliente a avisar que falhou <-----
 								_exit(-1);								
 							} else { // Processo pai escreve no ficheiro metadata a ligação para o ficheiro na diretoria /metadata
-
+								wait(0);
 								//adicionar o wait para que o move seja feito antes dum novo cenas ou parar caso corra mal.(SIGNAL) <----- CONTINUE ;P
 
 								if(fork()==0){//Processo filho para criar o link na diretoria /home/user/.Backup/metadata/ com o nome do digest
@@ -165,7 +167,7 @@ int main(int argc, char const *argv[])
 
 			}
 
-
+		_exit(0); // Processo que atende o pedido do cliente, sai.
 		}// O processo pai simplesmente avança para o próximo pedido abrindo e fechando o pipe de modo a bloquear novamente.
 		close(pipe_rd);
 		pipe_rd = open(pipe_path,O_RDONLY);
@@ -177,7 +179,6 @@ int main(int argc, char const *argv[])
 
 CENAS POR FAZER: 
 
-- FALTA GZIP NAO FODER O FICHEIRO DE ORIGEM
 - RESTORE
 - IMPEDIR O PROCESSO DE CONTINUAR SE DER MERDA A MEIO
 - SINAL AO CLIENTE SE CORRER MAL
