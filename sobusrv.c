@@ -225,7 +225,6 @@ int main(int argc, char const *argv[])
 						close(fd[0]);
 
 						if((son_pid=fork())==0){ // Processo filho para descomprimir o ficheiro
-
 							execlp("gunzip", "gunzip", "-f", "-k", symbolic_link, NULL);
 							perror("Failed to execute gunzip");
 							_exit(-1);

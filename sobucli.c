@@ -13,16 +13,16 @@
 int num_op, current_op=1;
 
 typedef void (*sighandler_t)(int);
-char[50][128] filenames;
+char** filenames;//[50][128];
 
 void signalhandler(int sign){
 	if(sign == SIGUSR2){
-		//printf("%s: Ocorreu um erro.\n", filename[current_op]); <--- 2) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA IMPRIMIR DIREITO.
+		printf("%s: Ocorreu um erro.\n", filenames[current_op]);// <--- 2) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA IMPRIMIR DIREITO.
 		printf("Ocorreu um erro.\n");
 		current_op++;
 	}
 	else if(sign == SIGUSR1){
-		//printf("%s: Sucesso.\n", filename[current_op]);  <--- 3) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA IMPRIMIR DIREITO.
+		printf("%s: Sucesso.\n", filenames[current_op]);//  <--- 3) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA IMPRIMIR DIREITO.
 		printf("Operação concluida com sucesso\n");
 		current_op++;
 	}
@@ -68,6 +68,7 @@ int main(int argc, char const *argv[])
 	char * username = strdup(getpwuid(getuid())->pw_name);
 	char dir[128];
 	snprintf(dir, 128, "/home/%s/.Backup/pipe", username);
+	filenames = malloc(50*sizeof(char*));
 
 // Número de operações/ficheiros
 	num_op = argc - 2;
@@ -91,9 +92,11 @@ int main(int argc, char const *argv[])
 
 // Construir string Comando a partir do argv
 	// Adicionar separador depois do comando
+	comand[0]='\0';
 	strcat(comand, " ");
 	for (i = 1, j = 0; i < argc; i++, j++) {
-		//strcpy(argv[i], filenames[j]); <--- 1) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA GUARDAR OS NOMES.
+		//strcpy(argv[i], filenames[j]); //<--- 1) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA GUARDAR OS NOMES. 
+		filenames[j] = strdup(argv[i]);
 		strcat(comand, argv[i]);
         if (argc > i+1)
         	strcat(comand, " ");
