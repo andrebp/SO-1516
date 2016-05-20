@@ -71,7 +71,8 @@ request_struct * requesthandler(char* client_request){
 int main(int argc, char const *argv[])
 {
 	signal(SIGINT,signalhandler);
-	int read_bytes, i, fd[2], son_pid, status;
+	pid_t son_pid;
+	int read_bytes, i, fd[2], status;
 	char request[REQUEST_MSIZE];
 	char * username = strdup(getpwuid(getuid())->pw_name);
 	char root_path[128];
@@ -128,13 +129,10 @@ int main(int argc, char const *argv[])
 						_exit(-1);
 					} else { // Processo requestHandler
 						close(fd[1]); 
-						
-						waitpid(son_pid, &status, WEXITED);
-						if(!WIFEXITED(status)){
+						if(waitpid(son_pid, &status, 0)==son_pid && WEXITSTATUS(status)!=0){
 							kill(rs->pid, SIGUSR2);
 							continue;
 						}
-
 						// Receber resultado sha1sum, tirar o path à frente , apenas ficar com digest 
 						char aux[128];
 						read(fd[0], aux, 128);
@@ -149,8 +147,7 @@ int main(int argc, char const *argv[])
 
 						} else { // Processo requestHandler
 
-							waitpid(son_pid, &status, WEXITED);/* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
-							if(!WIFEXITED(status)){
+							if(waitpid(son_pid, &status, 0)==son_pid && WEXITSTATUS(status)!=0){
 								kill(rs->pid, SIGUSR2);
 								continue;
 							}
@@ -165,12 +162,13 @@ int main(int argc, char const *argv[])
 								_exit(-1);								
 							} else { // // Processo requestHandler
 								
-								waitpid(son_pid, &status, WEXITED); /* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
-								if(!WIFEXITED(status)){
+								
+								if(waitpid(son_pid, &status, 0)==son_pid && WEXITSTATUS(status)!=0){
 									kill(rs->pid, SIGUSR2);
-									/* Executar um rm para limpar o ficheiro comprido que não foi movido */
+									/*executar um rm para limpar o ficheiro comprimido que não foi movido */
 									continue;
 								}
+
 
 								if((son_pid=fork())==0){//Processo filho para criar o link na diretoria /home/user/.Backup/metadata/ com o nome do digest
 									char link_path[256];
@@ -180,12 +178,12 @@ int main(int argc, char const *argv[])
 									_exit(-1);
 								} else { // // Processo requestHandler
 									
-									waitpid(son_pid, &status, WEXITED); /* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
-									if(!WIFEXITED(status)){
+									if(waitpid(son_pid, &status, 0)==son_pid && WEXITSTATUS(status)!=0){
 										kill(rs->pid, SIGUSR2);
 										/* Executar um rm para limpar o ficheiro na pasta data */
 										continue;
 									}
+
 									/* Sinal ao cliente que correu bem */	
 									kill(rs->pid, SIGUSR1);		
 								}
@@ -209,8 +207,7 @@ int main(int argc, char const *argv[])
 					} else { // Processo requestHandler
 						close(fd[1]);
 
-						waitpid(son_pid, &status, WEXITED); /* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
-						if(!WIFEXITED(status)){
+						if(waitpid(son_pid, &status, 0)==son_pid && WEXITSTATUS(status)!=0){
 							kill(rs->pid, SIGUSR2);
 							continue;
 						}
@@ -227,11 +224,10 @@ int main(int argc, char const *argv[])
 
 						} else { // Neste ponto, o ficheiro está restaurado, mas encontra-se na diretoria data, move-se agora para a diretoria de trabalho do user
 							
-							waitpid(son_pid, &status, WEXITED); /* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
-							if(!WIFEXITED(status)){
-								kill(rs->pid, SIGUSR2);
-								continue;
-							}
+							if(waitpid(son_pid, &status, 0)==son_pid && WEXITSTATUS(status)!=0){
+							kill(rs->pid, SIGUSR2);
+							continue;
+						}
 
 							if((son_pid=fork())==0){ // processo filho para mover o ficheiro para a diretoria de trabalho
 								symbolic_link[strlen(symbolic_link)-3]='\0'; // Retirar o .gz, o mv deve ser aplicado ao ficheiro e não ao ficheiro comprimido
@@ -240,11 +236,12 @@ int main(int argc, char const *argv[])
 								perror("Failed to move file");
 								_exit(-1);
 							} else { // Processo requestHandler
-								waitpid(son_pid, &status, WEXITED); /* Se correu mal, sinaliza o cliente e faz rollback do que foi feito até aqui. */
-								if(!WIFEXITED(status)){
+								
+								if(waitpid(son_pid, &status, 0)==son_pid && WEXITSTATUS(status)!=0){
 									kill(rs->pid, SIGUSR2);
 									continue;
 								}
+								
 								kill(rs->pid, SIGUSR1); /* Sinalizar ao cliente que a operação para este ficheiro correu bem */
 								// Processo que atende o pedido, requesthandler, sai, enviando um sinal ao processo principal que decrementa os pedidos ativos.
 								kill(getppid(), SIGUSR1);
