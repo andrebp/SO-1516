@@ -40,18 +40,17 @@ int produce_request(char * comand, char *request)
 	
 	// 3) Diretoria de Trabalho
 	getcwd(c_work_dir, sizeof(c_work_dir));
-	c_work_dir[strlen(c_work_dir)]='/'; c_work_dir[strlen(c_work_dir)+1]='\0';
-
+ 	 	
 	// 4) A string comando é criada na main
 
 	// 2) Tamanho Info
-	info_bytes = strlen(comand) + strlen(c_work_dir) + 2; // +2 Separador (espaço) + '\0'
+	info_bytes = strlen(comand) + strlen(c_work_dir) + 3; // +2 Separador (espaço) + / + '\0'
 
 	// Por tudo na string request
-	snprintf(request, REQUEST_MSIZE, "%d %d %s %s", process_pid, info_bytes, c_work_dir, comand);
+	snprintf(request, REQUEST_MSIZE, "%d %d %s/ %s", process_pid, info_bytes, c_work_dir, comand);
 	printf("%s\n", request);
 
-	tamanho = strlen(request) + 1; // +1 Para o carater de terminação /home/USER/.Backup/
+	tamanho = strlen(request) + 1; // +1 Para o carater de terminação
 	return tamanho;
 }
 
