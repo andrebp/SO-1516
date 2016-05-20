@@ -18,12 +18,11 @@ char** filenames;//[50][128];
 void signalhandler(int sign){
 	if(sign == SIGUSR2){
 		printf("%s: Ocorreu um erro.\n", filenames[current_op]);// <--- 2) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA IMPRIMIR DIREITO.
-		printf("Ocorreu um erro.\n");
 		current_op++;
 	}
 	else if(sign == SIGUSR1){
 		printf("%s: Sucesso.\n", filenames[current_op]);//  <--- 3) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA IMPRIMIR DIREITO.
-		printf("Operação concluida com sucesso\n");
+		printf("Todas as operações foram concluidas com sucesso!\n");
 		current_op++;
 	}
 }
