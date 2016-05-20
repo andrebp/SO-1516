@@ -207,8 +207,10 @@ int main(int argc, char const *argv[])
 						dup2(fd[1],1);
 						close(fd[0]);
 						close(fd[1]);
-						char link_path[256];
+						char* link_path = malloc(256*sizeof(char));
+						link_path[0]='\0';
 						snprintf(link_path, 256, "%s%s", metadata_path, rs->targets[i]);
+						printf("O link path é :%s\n", link_path );
 						execlp("readlink", "readlink", "-f", "-n", link_path, NULL); // flag '-n' serve para tirar o \n no final da string
 						printf("Couldn't obtain link\n");
 						_exit(-1);
@@ -223,6 +225,8 @@ int main(int argc, char const *argv[])
 						char * symbolic_link = malloc(256*sizeof(char));
 						read(fd[0],symbolic_link,256); //path da diretoria data/ onde está o ficheiro a ser restored
 						close(fd[0]);
+						symbolic_link[strlen(symbolic_link)]='\0';
+						printf("%s\n", symbolic_link );
 
 						if((son_pid=fork())==0){ // Processo filho para descomprimir o ficheiro
 							execlp("gunzip", "gunzip", "-f", "-k", symbolic_link, NULL);

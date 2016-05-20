@@ -22,7 +22,6 @@ void signalhandler(int sign){
 	}
 	else if(sign == SIGUSR1){
 		printf("%s: Sucesso.\n", filenames[current_op]);//  <--- 3) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA IMPRIMIR DIREITO.
-		printf("Todas as operações foram concluidas com sucesso!\n");
 		current_op++;
 	}
 }
