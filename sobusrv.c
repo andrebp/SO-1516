@@ -37,7 +37,7 @@ void signalhandler(int sign){
 	if(sign == SIGUSR1){
 		printf("Sinal recebido 1\n");
 		printf("%d\n", active_requests );
-		active_requests--;
+		active_requests=active_requests-1;
 		printf("%d\n", active_requests );
 	} else 	if(sign == SIGINT){
 
@@ -75,7 +75,7 @@ int main(int argc, char const *argv[])
 {
 	signal(SIGINT,signalhandler);
 	signal(SIGUSR1,signalhandler);
-	int read_bytes, i, fd[2], son_pid, status;
+	int read_bytes, i, fd[2], main_pid, son_pid, status;
 	char request[REQUEST_MSIZE];
 	char * username = strdup(getpwuid(getuid())->pw_name);
 	char root_path[128];
@@ -85,6 +85,8 @@ int main(int argc, char const *argv[])
 	snprintf(pipe_path, 128, "%spipe", root_path);
 	snprintf(data_path, 128, "%sdata/", root_path);
 	snprintf(metadata_path, 128, "%smetadata/", root_path);
+
+	main_pid=getpid();
 	
 /* Remover pipes ou ficheiros com o nome a ser usado */
 	unlink(pipe_path);
@@ -115,7 +117,7 @@ int main(int argc, char const *argv[])
 		// Transformação da string para a estrutura
 		rs=requesthandler(request);
 		printf("Active request antes de incrementar %d\n", active_requests);
-		active_requests++;
+		active_requests=active_requests+1;
 		printf("Active request depois de incrementar %d\n", active_requests );
 		// A execução do pedido fica a cargo de um processo requestHandler que trata do pedido recebido e sinaliza o cliente do sucesso ou insucesso.
 		if(fork()==0){
@@ -257,13 +259,13 @@ int main(int argc, char const *argv[])
 					}
 				}
 			}
-			kill(getppid(),SIGUSR1);
 		} else {
 			wait(0);
 		}
 		free(rs);
 		/* Processo principal do servidor simplesmente avança para o próximo pedido 
 				abrindo e fechando o pipe de modo a bloquear novamente, e criando um novo requestHandler pro novo pedido */
+		kill(main_pid,SIGUSR1);
 		close(pipe_rd);
 		pipe_rd = open(pipe_path,O_RDONLY);
 	}
