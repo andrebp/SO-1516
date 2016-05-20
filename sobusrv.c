@@ -35,10 +35,9 @@ typedef void (*sighandler_t)(int);
 
 void signalhandler(int sign){
 	if(sign == SIGUSR1){
-		printf("Sinal recebido 1\n");
-		printf("%d\n", active_requests );
-		active_requests=active_requests-1;
-		printf("%d\n", active_requests );
+		printf("Request finished work, decreasing active request counter.\n");
+		active_requests = active_requests--;
+
 	} else 	if(sign == SIGINT){
 
 		printf("\nServer closing\n");
@@ -75,7 +74,7 @@ int main(int argc, char const *argv[])
 {
 	signal(SIGINT,signalhandler);
 	signal(SIGUSR1,signalhandler);
-	int read_bytes, i, fd[2], main_pid, son_pid, status;
+	int read_bytes, i, fd[2], son_pid, status, main_pid = getpid();
 	char request[REQUEST_MSIZE];
 	char * username = strdup(getpwuid(getuid())->pw_name);
 	char root_path[128];
@@ -85,12 +84,11 @@ int main(int argc, char const *argv[])
 	snprintf(pipe_path, 128, "%spipe", root_path);
 	snprintf(data_path, 128, "%sdata/", root_path);
 	snprintf(metadata_path, 128, "%smetadata/", root_path);
-
-	main_pid=getpid();
 	
 /* Remover pipes ou ficheiros com o nome a ser usado */
 	unlink(pipe_path);
 
+	printf("%s\n", pipe_path); //						< -- PRINT PRA TIRAR DAQUI NO FIM DO DEBUG
 /* Pipe onde chegam os pedidos */
 	if (mkfifo(pipe_path, 0777) < 0){
 		printf("Couldn't create requested pipe\n");
@@ -105,20 +103,19 @@ int main(int argc, char const *argv[])
 
 /* Receber um pedido (bit stream) e fazer o que ele pede */
 	for(;;){
-		// Impedir o avanço da execução se o número de pedidos ativos for ==MAX_ACTIVE_REQUESTS ou incrementar o contador de pedidos ativos caso contrário.
-		while(active_requests >= MAX_ACTIVE_REQUESTS){
-			wait(NULL);
-		}
+		// "Limpar" a string request
+		request[0]='\0'; 
 		// Ler pedido do pipe
-		request[0]='\0';
 		read_bytes = read(pipe_rd, request, REQUEST_MSIZE);
 		// Alocação de memoria para a estrutura do request
 		request_struct *rs = malloc(sizeof(request_struct));
 		// Transformação da string para a estrutura
 		rs=requesthandler(request);
-		printf("Active request antes de incrementar %d\n", active_requests);
-		active_requests=active_requests+1;
-		printf("Active request depois de incrementar %d\n", active_requests );
+		// Impedir o avanço da execução se o número de pedidos ativos for ==MAX_ACTIVE_REQUESTS ou incrementar o contador de pedidos ativos caso contrário.
+		while(active_requests >= MAX_ACTIVE_REQUESTS){
+			wait(NULL);
+		}
+		active_requests=active_requests++;
 		// A execução do pedido fica a cargo de um processo requestHandler que trata do pedido recebido e sinaliza o cliente do sucesso ou insucesso.
 		if(fork()==0){ /* Processo requestHandler */
 
@@ -276,11 +273,9 @@ int main(int argc, char const *argv[])
 
 CENAS POR FAZER: 
 
-TESTAR COM VÁRIOS FICHEIROS!!!
-
 
 - SINAL AO CLIENTE SE CORRER MAL 	<- CHECKAR COMO ESTÁ.
-- ROLLBACK NAS CENAS MAL 			<- Dá muito trabalho.
+
 
 Relatório:
 Conices (Capa, Indice, Objetivos -> interpretação do enunciado, esturtura do relatório -> como é que ele foi desenvolvido)
@@ -299,6 +294,6 @@ PONTOS IMPORTANTES A REFERIR:
 ..... + ?
 
 - TRABALHO FUTURO -> CRIAR UMA TABELA ONDE NUMERO DE SIGNALS == SITIO ESPECIFICO DA FALHA DA EXECUÇÂO
-
+- ROLLBACK NAS CENAS MAL 			<- Era bom mas não houve recursos
 
 */

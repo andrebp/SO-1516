@@ -10,18 +10,21 @@
 
 #define REQUEST_MSIZE 1024
 
-int controlo = 1; /* alterar esta variavel para o numero de pedidos do cliente. Assim, o programa sobucli só termina quando todos acabarem e não apenas quando 1 acaba*/
+int num_op, current_op=1;
 
 typedef void (*sighandler_t)(int);
+char[50][128] filenames;
 
 void signalhandler(int sign){
 	if(sign == SIGUSR2){
+		//printf("%s: Ocorreu um erro.\n", filename[current_op]); <--- 2) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA IMPRIMIR DIREITO.
 		printf("Ocorreu um erro.\n");
-		controlo = 0;
+		current_op++;
 	}
 	else if(sign == SIGUSR1){
+		//printf("%s: Sucesso.\n", filename[current_op]);  <--- 3) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA IMPRIMIR DIREITO.
 		printf("Operação concluida com sucesso\n");
-		controlo = 0;
+		current_op++;
 	}
 }
 
@@ -61,11 +64,13 @@ int main(int argc, char const *argv[])
 	int pipe_wr;
 	char request[REQUEST_MSIZE];
 	char comand[REQUEST_MSIZE-15];
-	int i, request_size;
+	int i, j, request_size;
 	char * username = strdup(getpwuid(getuid())->pw_name);
 	char dir[128];
 	snprintf(dir, 128, "/home/%s/.Backup/pipe", username);
 
+// Número de operações/ficheiros
+	num_op = argc - 2;
 // Argumentos insuficientes 
 	if (argc < 3) {
 		puts("Error: Insufficient Arguments.");
@@ -78,9 +83,17 @@ int main(int argc, char const *argv[])
 		exit(-1);
 	}
 
+// Error check: Comando inválido
+	if ((strcmp(argv[1], "backup") != 0) && (strcmp(argv[1], "restore") != 0)){
+		printf("Invalid comand, try again.\n");
+		exit(-1);
+	}
+
 // Construir string Comando a partir do argv
-	comand[0]='\0';
-	for (i = 1; i < argc; i++) {
+	// Adicionar separador depois do comando
+	strcat(comand, " ");
+	for (i = 1, j = 0; i < argc; i++, j++) {
+		//strcpy(argv[i], filenames[j]); <--- 1) SE DE FACTO FUNCIONAR, É SO TIRAR O COMENTARIO PARA GUARDAR OS NOMES.
 		strcat(comand, argv[i]);
         if (argc > i+1)
         	strcat(comand, " ");
@@ -96,7 +109,7 @@ int main(int argc, char const *argv[])
 
 	close(pipe_wr);
 
-	while(controlo==1);
+	while(current_op <= num_op);
 	return 0;
 }
 
