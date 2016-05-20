@@ -36,7 +36,9 @@ typedef void (*sighandler_t)(int);
 void signalhandler(int sign){
 	if(sign == SIGUSR1){
 		printf("Sinal recebido 1\n");
+		printf("%d\n", active_requests );
 		active_requests--;
+		printf("%d\n", active_requests );
 	} else 	if(sign == SIGINT){
 
 		printf("\nServer closing\n");
@@ -56,12 +58,9 @@ request_struct * requesthandler(char* client_request){
 	rs->call_dir = malloc(100*sizeof(char));
 	rs->targets = malloc(100*sizeof(char*));
 
-	printf("O request é : %s\n", client_request);
-
+	
 	rs->pid = atoi(strtok(client_request," "));
-	printf("O PID é : %d\n",rs->pid);
 	rs->size = atoi(strtok(NULL," "));
-	printf("O tamanho da mensagem é : %d\n", rs->size );
 	rs->call_dir = strtok(NULL," "); // Não funciona se alguma pasta tiver espaços no nome 
 	rs->action = strtok(NULL," ");
 	for(i=0;(target=strtok(NULL," "))!= NULL;i++){
@@ -108,7 +107,6 @@ int main(int argc, char const *argv[])
 		while(active_requests >= MAX_ACTIVE_REQUESTS){
 			wait(NULL);
 		}
-		active_requests++;
 		// Ler pedido do pipe
 		request[0]='\0';
 		read_bytes = read(pipe_rd, request, REQUEST_MSIZE);
@@ -116,6 +114,9 @@ int main(int argc, char const *argv[])
 		request_struct *rs = malloc(sizeof(request_struct));
 		// Transformação da string para a estrutura
 		rs=requesthandler(request);
+		printf("Active request antes de incrementar %d\n", active_requests);
+		active_requests++;
+		printf("Active request depois de incrementar %d\n", active_requests );
 		// A execução do pedido fica a cargo de um processo requestHandler que trata do pedido recebido e sinaliza o cliente do sucesso ou insucesso.
 		if(fork()==0){
 
@@ -256,7 +257,11 @@ int main(int argc, char const *argv[])
 					}
 				}
 			}
+			kill(getppid(),SIGUSR1);
+		} else {
+			wait(0);
 		}
+		free(rs);
 		/* Processo principal do servidor simplesmente avança para o próximo pedido 
 				abrindo e fechando o pipe de modo a bloquear novamente, e criando um novo requestHandler pro novo pedido */
 		close(pipe_rd);
