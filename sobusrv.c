@@ -35,7 +35,7 @@ typedef void (*sighandler_t)(int);
 
 void signalhandler(int sign){
 	if(sign == SIGUSR1){
-
+		printf("Sinal recebido 1\n");
 		active_requests--;
 	} else 	if(sign == SIGINT){
 
@@ -56,8 +56,12 @@ request_struct * requesthandler(char* client_request){
 	rs->call_dir = malloc(100*sizeof(char));
 	rs->targets = malloc(100*sizeof(char*));
 
+	printf("O request é : %s\n", client_request);
+
 	rs->pid = atoi(strtok(client_request," "));
+	printf("O PID é : %d\n",rs->pid);
 	rs->size = atoi(strtok(NULL," "));
+	printf("O tamanho da mensagem é : %d\n", rs->size );
 	rs->call_dir = strtok(NULL," "); // Não funciona se alguma pasta tiver espaços no nome 
 	rs->action = strtok(NULL," ");
 	for(i=0;(target=strtok(NULL," "))!= NULL;i++){
@@ -71,8 +75,8 @@ request_struct * requesthandler(char* client_request){
 int main(int argc, char const *argv[])
 {
 	signal(SIGINT,signalhandler);
-	pid_t son_pid;
-	int read_bytes, i, fd[2], status;
+	signal(SIGUSR1,signalhandler);
+	int read_bytes, i, fd[2], son_pid, status;
 	char request[REQUEST_MSIZE];
 	char * username = strdup(getpwuid(getuid())->pw_name);
 	char root_path[128];
@@ -106,6 +110,7 @@ int main(int argc, char const *argv[])
 		}
 		active_requests++;
 		// Ler pedido do pipe
+		request[0]='\0';
 		read_bytes = read(pipe_rd, request, REQUEST_MSIZE);
 		// Alocação de memoria para a estrutura do request
 		request_struct *rs = malloc(sizeof(request_struct));
@@ -173,7 +178,7 @@ int main(int argc, char const *argv[])
 								if((son_pid=fork())==0){//Processo filho para criar o link na diretoria /home/user/.Backup/metadata/ com o nome do digest
 									char link_path[256];
 									snprintf(link_path, 256, "%s%s", metadata_path, rs->targets[i]);
-									execlp("ln", "ln", "-s", "-T", move_path, link_path, NULL);
+									execlp("ln", "ln", "-f", "-s", "-T", move_path, link_path, NULL);
 									printf("Couldn't create symlink\n");
 									_exit(-1);
 								} else { // // Processo requestHandler
@@ -246,7 +251,7 @@ int main(int argc, char const *argv[])
 								// Processo que atende o pedido, requesthandler, sai, enviando um sinal ao processo principal que decrementa os pedidos ativos.
 								kill(getppid(), SIGUSR1);
 								_exit(0); 
-							}
+								}
 						}
 					}
 				}
