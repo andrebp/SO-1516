@@ -120,7 +120,7 @@ int main(int argc, char const *argv[])
 		active_requests=active_requests+1;
 		printf("Active request depois de incrementar %d\n", active_requests );
 		// A execução do pedido fica a cargo de um processo requestHandler que trata do pedido recebido e sinaliza o cliente do sucesso ou insucesso.
-		if(fork()==0){
+		if(fork()==0){ /* Processo requestHandler */
 
 			if(strcmp(rs->action,"backup")==0){
 
@@ -192,13 +192,16 @@ int main(int argc, char const *argv[])
 										continue;
 									}
 
-									/* Sinal ao cliente que correu bem */	
+									/* Sinal ao cliente que este ficheiro correu bem bem */	
 									kill(rs->pid, SIGUSR1);		
 								}
 							}
 						}
 					}
 				}
+				// Processo que atende o pedido, requesthandler, sai, enviando um sinal ao processo principal que decrementa os pedidos ativos.
+				kill(main_pid, SIGUSR1);
+				_exit(0); 
 			} else if(strcmp(rs->action,"restore")==0){
 				/* Percorrer todos os pedidos */
 				for(i=0;rs->targets[i] != NULL; i++){
@@ -251,21 +254,18 @@ int main(int argc, char const *argv[])
 								}
 								
 								kill(rs->pid, SIGUSR1); /* Sinalizar ao cliente que a operação para este ficheiro correu bem */
-								// Processo que atende o pedido, requesthandler, sai, enviando um sinal ao processo principal que decrementa os pedidos ativos.
-								kill(getppid(), SIGUSR1);
-								_exit(0); 
-								}
+							}
 						}
 					}
 				}
+				// Processo que atende o pedido, requesthandler, sai, enviando um sinal ao processo principal que decrementa os pedidos ativos.
+				kill(main_pid, SIGUSR1);
+				_exit(0); 
 			}
-		} else {
-			wait(0);
 		}
-		free(rs);
 		/* Processo principal do servidor simplesmente avança para o próximo pedido 
 				abrindo e fechando o pipe de modo a bloquear novamente, e criando um novo requestHandler pro novo pedido */
-		kill(main_pid,SIGUSR1);
+		free(rs);
 		close(pipe_rd);
 		pipe_rd = open(pipe_path,O_RDONLY);
 	}
