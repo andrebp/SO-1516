@@ -85,12 +85,12 @@ int main(int argc, char const *argv[])
 	snprintf(data_path, 128, "%sdata/", root_path);
 	snprintf(metadata_path, 128, "%smetadata/", root_path);
 	
+	mkfifo(pipe_path,0777);
 /* Remover pipes ou ficheiros com o nome a ser usado */
 	unlink(pipe_path);
 
-	printf("%s\n", pipe_path); //						< -- PRINT PRA TIRAR DAQUI NO FIM DO DEBUG
 /* Pipe onde chegam os pedidos */
-	if (mkfifo(pipe_path, 0777) < 0){
+	if (mkfifo(pipe_path, 0777 ) < 0){
 		printf("Couldn't create requested pipe\n");
 		exit(-1);
 	}
@@ -210,7 +210,7 @@ int main(int argc, char const *argv[])
 						char* link_path = malloc(256*sizeof(char));
 						link_path[0]='\0';
 						snprintf(link_path, 256, "%s%s", metadata_path, rs->targets[i]);
-						printf("O link path é :%s\n", link_path );
+						//printf("O link path é :%s\n", link_path );
 						execlp("readlink", "readlink", "-f", "-n", link_path, NULL); // flag '-n' serve para tirar o \n no final da string
 						printf("Couldn't obtain link\n");
 						_exit(-1);
@@ -226,7 +226,7 @@ int main(int argc, char const *argv[])
 						read(fd[0],symbolic_link,256); //path da diretoria data/ onde está o ficheiro a ser restored
 						close(fd[0]);
 						symbolic_link[strlen(symbolic_link)]='\0';
-						printf("%s\n", symbolic_link );
+						//printf("O link simbolico é %s\n", symbolic_link );
 
 						if((son_pid=fork())==0){ // Processo filho para descomprimir o ficheiro
 							execlp("gunzip", "gunzip", "-f", "-k", symbolic_link, NULL);
@@ -271,32 +271,3 @@ int main(int argc, char const *argv[])
 	}
 	return 0;
 }
-
-/*
-
-CENAS POR FAZER: 
-
-
-- SINAL AO CLIENTE SE CORRER MAL 	<- CHECKAR COMO ESTÁ.
-
-
-Relatório:
-Conices (Capa, Indice, Objetivos -> interpretação do enunciado, esturtura do relatório -> como é que ele foi desenvolvido)
-Explicar estrutura geral dos programas.
-Dizer pontos fulcrais do programa.
-Dizer como os resolvemos.
-Conclusão e trabalho futuro
-
-PONTOS IMPORTANTES A REFERIR: 
-- IMPEDIR MAIS DE 5 LIGAÇÕES		<- 	Variável global guarda o número de pedidos ativos.
-										Sempre que um requestHandler é criado o valor é incrementado,
-										sempre que um requestHandler acaba o trabalho o valor é decrementado através dum sinal,
-										que é enviado ao processo principal.
-										Caso numero de requests ativos >5:
-										- Poe-se o main process à espera que um request saia.
-..... + ?
-
-- TRABALHO FUTURO -> CRIAR UMA TABELA ONDE NUMERO DE SIGNALS == SITIO ESPECIFICO DA FALHA DA EXECUÇÂO
-- ROLLBACK NAS CENAS MAL 			<- Era bom mas não houve recursos
-
-*/

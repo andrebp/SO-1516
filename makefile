@@ -19,6 +19,7 @@ installF: header installing cliente servidor
 	sudo mkdir /home/$(USER)/.Backup/
 	sudo mkdir /home/$(USER)/.Backup/data/
 	sudo mkdir /home/$(USER)/.Backup/metadata/
+	sudo chmod 777 /home/$(USER)/.Backup/
 	sudo mv ./sobusrv ./sobucli /bin/
 	rm *.o
 

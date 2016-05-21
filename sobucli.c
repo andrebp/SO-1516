@@ -49,8 +49,7 @@ int produce_request(char * comand, char *request)
 
 	// Por tudo na string request
 	snprintf(request, REQUEST_MSIZE, "%d %d %s/ %s", process_pid, info_bytes, c_work_dir, comand);
-	printf("%s\n", request);
-
+	
 	tamanho = strlen(request) + 1; // +1 Para o carater de terminação
 	return tamanho;
 }
@@ -115,20 +114,3 @@ int main(int argc, char const *argv[])
 }
 
 
-/* 
-
--- CENAS POR FAZER NO CLIENTE:
-
-TESTAR COM VÁRIOS FICHEIROS!!!
-
-- RECEBER SINAIS NO GERAL.
-- TRADUZIR EXPRESSÕES REGULARES.
-
-
-Relatório:
-
-- Fazer datagrama a explicar buffer;
--- Se a mensagem for mt grande enão couber no buffer á primeira deveria ler-se os primeiros 8 bits
-para saber até onde se tem de ler.
-
-*/
