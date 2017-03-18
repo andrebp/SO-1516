@@ -74,7 +74,7 @@ int main(int argc, char const *argv[])
 {
 	signal(SIGINT,signalhandler);
 	signal(SIGUSR1,signalhandler);
-	int read_bytes, i, fd[2], son_pid, status, main_pid = getpid();
+	int read_bytes, i, fifo, fd[2], son_pid, status, main_pid = getpid();
 	char request[REQUEST_MSIZE];
 	char * username = strdup(getpwuid(getuid())->pw_name);
 	char root_path[128];
@@ -85,13 +85,14 @@ int main(int argc, char const *argv[])
 	snprintf(data_path, 128, "%sdata/", root_path);
 	snprintf(metadata_path, 128, "%smetadata/", root_path);
 	
-	mkfifo(pipe_path,0777);
-/* Remover pipes ou ficheiros com o nome a ser usado */
 	unlink(pipe_path);
 
+	fifo = mkfifo(pipe_path,0777);
+/* Remover pipes ou ficheiros com o nome a ser usado */
+
 /* Pipe onde chegam os pedidos */
-	if (mkfifo(pipe_path, 0777 ) < 0){
-		printf("Couldn't create requested pipe\n");
+	if (fifo < 0){
+		perror("Couldn't create requested pipe");
 		exit(-1);
 	}
 
