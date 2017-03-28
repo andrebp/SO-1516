@@ -109,7 +109,9 @@ int main(int argc, char const *argv[])
 
 	close(pipe_wr);
 
-	while(current_op <= num_op);
+	while(current_op <= num_op){
+		pause();
+	}
 	return 0;
 }
 

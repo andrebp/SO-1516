@@ -1,24 +1,46 @@
-Git is love, Git is life.
+# Efficient Backup
+
+This is the project of the Operating Systems course in Computer Engineering at the University of Minho.
+The project consists in creating an efficient system to backup files. 
+The main goals are:
+	- Minimize the space occupied on disk by the files;
+	- Using a client/server architecture, for privacy purposes.
+
+The server must be able to run concurrently, in order to achieve high efficiency. 
+
+## Download and install
+
+To work with the source code, clone this repository:
+	
+	$ git clone
+
+To install:
+	
+	$ make installF
+
+Anytime you want to uninstall:
+
+	$ make uninstallF
+
+## Usage
+
+The server starts with:
+
+	$ sobusrv
 
 
-Servidor de Backups:
-2 Programas: Servidor (sobusrv)  + Cliente (sobucli)
-	- Impedir acesso direto aos ficheiros;
-	- Comprimir Dados;
-	- Eliminar duplicados;
+Then the client can backup or restore using the commands:
 
-sobusrv:
-	Processo pai aceita conexões, e manda o trabalho para processos filhos.
-	Comunicação entre processos filhos e clientes por pipes com nome.
-	Guarda tudo numa diretoria /home/user/.Backup/
-	Respostas aos pedidos por sinais.
-	Ações concorrentes sempre <=5.
+	$ sobucli backup file1 file2
+	file1: Sucesso.
+	file2: Sucesso.
 
-sobucli:
-	Estabelece conexões com o servidor e faz o que tem a fazer.
-	Cliente não lê nem escreve ficheiros. Só faz pedidos.
 
-to do list:
-	cliente traduz expressões regulares.
-	fazer forks (fazer o "pedido" num filho).
-	signal para o cliente.
+	$ sobucli restore file1 file2
+	file1: Sucesso.
+	file2: Sucesso.
+
+## Authors
+
+* [André Brandão](https://github.com/andrebrandao21)
+* [Hugo Gonçalves](https://github.com/Hugainz)
