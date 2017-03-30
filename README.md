@@ -3,9 +3,8 @@
 This is the project of the Operating Systems course in Computer Engineering at the University of Minho.
 The project consists in creating an efficient system to backup files. 
 The main goals are:
-	
-	- Minimize the space occupied on disk by the files;
-	- Using a client/server architecture, for privacy purposes.
+Markup : * Minimize the space occupied on disk by the files;
+		 * Using a client/server architecture, for privacy purposes.
 
 The server must be able to run concurrently, in order to achieve high efficiency. 
 
