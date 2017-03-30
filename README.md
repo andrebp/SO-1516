@@ -3,6 +3,7 @@
 This is the project of the Operating Systems course in Computer Engineering at the University of Minho.
 The project consists in creating an efficient system to backup files. 
 The main goals are:
+	
 	- Minimize the space occupied on disk by the files;
 	- Using a client/server architecture, for privacy purposes.
 
@@ -34,11 +35,12 @@ Then the client can backup or restore using the commands:
 	$ sobucli backup file1 file2
 	file1: Sucesso.
 	file2: Sucesso.
-
+	$_
 
 	$ sobucli restore file1 file2
 	file1: Sucesso.
 	file2: Sucesso.
+	$_
 
 ## Authors
 
